@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: pg_marketplace
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: marketplace
+      POSTGRES_USER: postgreSSS123
+      POSTGRES_PASSWORD: postgresQQQ123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - marketplace_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketplace"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - marketplace_net
+
+  backend:
+    build: ./backend
+    container_name: marketplace_backend
+    restart: unless-stopped
+    environment:
+      DB_URL: postgresql://postgres:postgres@postgres:5432/marketplace
+      JWT_SECRET: marketplace-jwt-secret-change-in-prod
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - marketplace_net
+
+  frontend:
+    build: ./frontend
+    container_name: marketplace_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - marketplace_net
+
+volumes:
+  pg_data:
+
+networks:
+  marketplace_net:
+    driver: bridge

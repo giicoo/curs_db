@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip3 --version)",
+      "Bash(docker --version)",
+      "Bash(mkdir -p /home/tokito/projects/tulsu/cur_db/backend/app/auth /home/tokito/projects/tulsu/cur_db/backend/app/catalog /home/tokito/projects/tulsu/cur_db/backend/app/products /home/tokito/projects/tulsu/cur_db/backend/app/orders /home/tokito/projects/tulsu/cur_db/backend/app/reviews /home/tokito/projects/tulsu/cur_db/backend/app/reports)",
+      "Bash(mkdir -p /home/tokito/projects/tulsu/cur_db/frontend/src/views /home/tokito/projects/tulsu/cur_db/frontend/src/components /home/tokito/projects/tulsu/cur_db/frontend/src/stores /home/tokito/projects/tulsu/cur_db/frontend/src/router /home/tokito/projects/tulsu/cur_db/frontend/src/api)",
+      "Bash(curl *)",
+      "Bash(docker compose *)"
+    ]
+  }
+}
