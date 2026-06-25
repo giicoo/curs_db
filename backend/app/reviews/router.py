@@ -30,28 +30,6 @@ async def create_review(
         if not customer:
             raise HTTPException(404, "Customer profile not found")
 
-        # Business rule: must have a delivered order containing this product
-        has_delivered = await conn.fetchval(
-            """
-            SELECT EXISTS(
-                SELECT 1
-                FROM orders o
-                JOIN order_items oi ON oi.order_id = o.id
-                JOIN order_statuses os ON os.id = o.status_id
-                WHERE o.customer_id=$1
-                  AND oi.product_id=$2
-                  AND os.is_final = true
-                  AND os.name != 'Отменён'
-            )
-            """,
-            customer["id"], body.product_id,
-        )
-        if not has_delivered:
-            raise HTTPException(
-                403,
-                "You can only review products from delivered orders",
-            )
-
         already_reviewed = await conn.fetchval(
             "SELECT EXISTS(SELECT 1 FROM reviews WHERE customer_id=$1 AND product_id=$2)",
             customer["id"], body.product_id,

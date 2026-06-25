@@ -1,11 +1,106 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
-from datetime import date
+from datetime import date, datetime, timezone
 
 from app.database import get_pool
 from app.auth.deps import get_current_user
 
 router = APIRouter()
+
+
+def _month_start(months_back: int) -> datetime:
+    now = datetime.now(timezone.utc)
+    m = now.month - months_back
+    y = now.year
+    while m <= 0:
+        m += 12
+        y -= 1
+    return datetime(y, m, 1, tzinfo=timezone.utc)
+
+
+@router.get("/revenue-by-month")
+async def revenue_by_month(
+    months: int = Query(12, ge=3, le=24),
+    current_user: dict = Depends(get_current_user),
+    pool=Depends(get_pool),
+):
+    start_date = _month_start(months)
+
+    if current_user["role"] == "seller":
+        async with pool.acquire() as conn:
+            seller = await conn.fetchrow(
+                "SELECT id FROM sellers WHERE user_id=$1", current_user["user_id"]
+            )
+        if not seller:
+            return []
+
+        query = """
+            WITH month_series AS (
+                SELECT generate_series(
+                    DATE_TRUNC('month', $1::timestamptz),
+                    DATE_TRUNC('month', NOW()),
+                    INTERVAL '1 month'
+                ) AS mo
+            ),
+            seller_data AS (
+                SELECT
+                    DATE_TRUNC('month', o.order_date) AS mo,
+                    SUM(oi.quantity * oi.price_at_order) AS revenue,
+                    COUNT(DISTINCT o.id) AS order_count,
+                    SUM(oi.quantity) AS units_sold
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                JOIN products p ON p.id = oi.product_id
+                WHERE p.seller_id = $2
+                  AND o.order_date >= $1::timestamptz
+                GROUP BY DATE_TRUNC('month', o.order_date)
+            )
+            SELECT
+                TO_CHAR(ms.mo, 'YYYY-MM') AS month,
+                COALESCE(sd.revenue, 0) AS revenue,
+                COALESCE(sd.order_count, 0) AS order_count,
+                COALESCE(sd.units_sold, 0) AS units_sold
+            FROM month_series ms
+            LEFT JOIN seller_data sd ON sd.mo = ms.mo
+            ORDER BY ms.mo
+        """
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(query, start_date, seller["id"])
+    else:
+        query = """
+            WITH month_series AS (
+                SELECT generate_series(
+                    DATE_TRUNC('month', $1::timestamptz),
+                    DATE_TRUNC('month', NOW()),
+                    INTERVAL '1 month'
+                ) AS mo
+            ),
+            all_data AS (
+                SELECT
+                    DATE_TRUNC('month', o.order_date) AS mo,
+                    SUM(oi.quantity * oi.price_at_order) AS revenue,
+                    COUNT(DISTINCT o.id) AS order_count,
+                    SUM(oi.quantity) AS units_sold
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE o.order_date >= $1::timestamptz
+                GROUP BY DATE_TRUNC('month', o.order_date)
+            )
+            SELECT
+                TO_CHAR(ms.mo, 'YYYY-MM') AS month,
+                COALESCE(ad.revenue, 0) AS revenue,
+                COALESCE(ad.order_count, 0) AS order_count,
+                COALESCE(ad.units_sold, 0) AS units_sold
+            FROM month_series ms
+            LEFT JOIN all_data ad ON ad.mo = ms.mo
+            ORDER BY ms.mo
+        """
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(query, start_date)
+
+    return [
+        {**dict(r), "revenue": float(r["revenue"])} for r in rows
+    ]
 
 
 @router.get("/sales")

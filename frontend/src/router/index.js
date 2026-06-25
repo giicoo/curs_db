@@ -2,7 +2,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 
 const routes = [
-  { path: '/', redirect: '/catalog' },
+  {
+    path: '/',
+    redirect: () => {
+      const auth = useAuthStore()
+      return auth.isSeller ? '/seller/products' : '/catalog'
+    },
+  },
   { path: '/login', component: () => import('../views/LoginView.vue') },
   { path: '/register', component: () => import('../views/RegisterView.vue') },
   { path: '/catalog', component: () => import('../views/CatalogView.vue') },
@@ -35,7 +41,7 @@ const routes = [
   {
     path: '/reports',
     component: () => import('../views/ReportsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, role: 'seller' },
   },
 ]
 

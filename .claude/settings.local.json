@@ -8,5 +8,8 @@
       "Bash(curl *)",
       "Bash(docker compose *)"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "shadcnVue"
+  ]
 }
