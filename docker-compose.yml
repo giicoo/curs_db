@@ -5,8 +5,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: marketplace
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgresQQQ
+      POSTGRES_PASSWORD: postgresSSS
     ports:
       - "5444:5432"
     volumes:
@@ -40,7 +40,7 @@ services:
     container_name: marketplace_backend
     restart: unless-stopped
     environment:
-      DB_URL: postgresql://postgres:postgres@postgres:5432/marketplace
+      DB_URL: postgresql://postgresQQQ:postgresSSS@postgres:5432/marketplace
       JWT_SECRET: marketplace-jwt-secret-change-in-prod
     ports:
       - "8001:8000"
